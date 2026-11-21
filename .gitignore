@@ -1,6 +1,29 @@
+# Configuração local e credenciais
 .env
 .env.*
 !.env.example
-.venv/
-__pycache__/
 .vercel/
+
+# Ambientes virtuais e cache de pacotes Python
+.venv/
+venv/
+env/
+.pip-cache/
+
+# Bytecode e caches de ferramentas
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build e metadados de pacotes
+build/
+dist/
+*.egg-info/
+
+# Cobertura de testes
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
