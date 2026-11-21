@@ -3,11 +3,12 @@ from secrets import compare_digest
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from .campus_navigation import CampusMap
+from .auth import auth_db, session_user, check_csrf
 from .repository import MongoGraph, local_graph
 
 
@@ -49,12 +50,21 @@ def repository():
     return MongoGraph()
 
 
-def require_admin(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
-    expected = os.getenv("ADMIN_TOKEN") or ""
-    if len(expected) < 32:
-        raise HTTPException(503, "Edição administrativa não configurada.")
-    if not credentials or not compare_digest(credentials.credentials.encode(), expected.encode()):
-        raise HTTPException(401, "Credencial administrativa inválida.", headers={"WWW-Authenticate": "Bearer"})
+def require_admin(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+    # Existing automation token is supported; browser editing uses revocable sessions.
+    if credentials:
+        expected = os.getenv("ADMIN_TOKEN") or ""
+        if len(expected) >= 32 and compare_digest(credentials.credentials.encode(), expected.encode()):
+            return
+        raise HTTPException(401, "Credencial administrativa inválida.")
+    if not request.cookies:
+        raise HTTPException(401, "Entre na sua conta para continuar.")
+    user, session = session_user(request, auth_db())
+    check_csrf(request, session)
+    if user['role'] != 'admin':
+        raise HTTPException(403, "Acesso restrito a administradores.")
+    if user.get('must_change_password'):
+        raise HTTPException(403, "Troque sua senha temporária antes de editar.")
 
 
 def point_exists(graph, point_id):

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 
 from campus.controllers import router
+from campus.auth import router as auth_router
 
 
 load_dotenv()
@@ -15,8 +16,9 @@ origins = [v.strip().rstrip("/") for v in os.getenv(
     "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",") if v.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=[o for o in origins if o != "*"],
-                   allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
+                   allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"], allow_credentials=True)
 app.include_router(router)
+app.include_router(auth_router)
 
 
 @app.middleware("http")
